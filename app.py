@@ -96,7 +96,7 @@ def getLimits():
                         .filter_by(sn = serialNo, test_name = tName, tets_field = tField) \
                         .first()
 
-        if len(result.limits_used.split()) >= 3:
+        if len(result.limits_used.split()) == 3:
             return jsonify({"id": result.id,
                             "sn": result.sn,
                             "s_no": result.s_no,
@@ -107,15 +107,29 @@ def getLimits():
                             "spec_name": result.spec_name,
                             "limits_used": result.limits_used,
                             "limits_min": result.limits_used.split()[2] \
-                                            if (len(result.limits_used.split()) == 3 and \
-                                                (result.limits_used.split()[1] == ">=" or \
-                                                result.limits_used.split()[1] == ">")) \
+                                            if result.limits_used.split()[1] == ">=" or \
+                                                result.limits_used.split()[1] == ">" \
                                             else result.limits_used.split()[0],
                             "limits_max": result.limits_used.split()[2] \
-                                            if (len(result.limits_used.split()) == 3 and \
-                                                (result.limits_used.split()[1] == "<=" or \
-                                                result.limits_used.split()[1] == "<")) \
-                                            else result.limits_used.split()[4],
+                                            if result.limits_used.split()[1] == "<=" or \
+                                                result.limits_used.split()[1] == "<" \
+                                            else result.limits_used.split()[0],
+                            "start_time": result.start_time,
+                            "stop_time": result.stop_time,
+                            "comments": result.comments})
+        
+        if len(result.limits_used.split()) == 5:
+            return jsonify({"id": result.id,
+                            "sn": result.sn,
+                            "s_no": result.s_no,
+                            "test_name": result.test_name,
+                            "test_field": result.tets_field,
+                            "test_value": result.test_value,
+                            "test_result": result.test_result,
+                            "spec_name": result.spec_name,
+                            "limits_used": result.limits_used,
+                            "limits_min": result.limits_used.split()[0],
+                            "limits_max": result.limits_used.split()[4],
                             "start_time": result.start_time,
                             "stop_time": result.stop_time,
                             "comments": result.comments})
