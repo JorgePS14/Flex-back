@@ -61,6 +61,26 @@ def getSerialNos():
     except Exception as e:
 	    return(str(e), 500)
 
+@app.route("/getTestNames")
+def getTestNames():
+    try: 
+        names = db.session.query(models.Tests.test_name).group_by(models.Tests.test_name).all()
+        return jsonify([name.test_name for name in names])
+
+    except Exception as e:
+	    return(str(e), 500)
+
+@app.route("/getTestFields")
+def getTestFields():
+    try: 
+        fields = db.session.query(models.Tests.tets_field).group_by(models.Tests.tets_field).all()
+        return jsonify([name.tets_field for field in fields])
+
+    except Exception as e:
+	    return(str(e), 500)
+
+#@app.route()
+
 @app.route("/getBySerial", methods = ['POST'])
 def getBySerial():
     dic = json.loads(request.get_data())
@@ -186,54 +206,60 @@ def latestFromSerial():
     try: 
         rs = db.session.query(models.Tests.limits_used,
                                 models.Tests.test_name,
+                                models.Tests.tets_field,
                                 models.Tests.stop_time,
                                 models.Tests.test_value) \
                         .filter(models.Tests.limits_used.isnot(None)) \
                         .filter(models.Tests.limits_used != "") \
-                        .filter_by(sn=sn) \
+                        .filter_by(sn = sn) \
                         .order_by(models.Tests.test_name) \
                         .all()
         res = []
         test = ""
+        field = ""
         time = []
         test_to_add = {}
-        count = 0
 
         for i in rs:
-            count += 1
 
-            if test == "" and len(i.limits_used.split()) == 5:
+            if test == "" and field == "" and len(i.limits_used.split()) == 5:
                 test = i.test_name
-                time = re.split(r"[ :-/]+", i.stop_time)
+                field = i.tets_field
+                time = re.split(r"[ :/-]+", i.stop_time)
                 test_to_add = i
 
-            elif i.test_name != test and test_to_add != {}:
+            elif (i.test_name != test or i.tets_field != field) and test_to_add != {}:
                 res.append(test_to_add)
 
-                if len(i.limits_used.split()) == 5:
+                if len(i.limits_used.split()) == 5 or len(i.limits_used.split()) == 3:
                     test = i.test_name
-                    time = re.split(r"[ :-/]+", i.stop_time)
+                    field = i.tets_field
+                    time = re.split(r"[ :/-]+", i.stop_time)
                     test_to_add = i
 
                 else:
                     test = ""
+                    field = ""
                     time = []
                     test_to_add = {}
 
             elif i.test_name == test \
-                    and len(i.limits_used.split()) == 5 \
-                    and olderThan(time, re.split(r"[ :-/]+", i.stop_time)):
-                time = re.split(r"[ :-/]+", i.stop_time)
+                    and i.tets_field == field \
+                    and (len(i.limits_used.split()) == 5 or len(i.limits_used.split()) == 3) \
+                    and olderThan(time, re.split(r"[ :/-]+", i.stop_time)):
+                time = re.split(r"[ :/-]+", i.stop_time)
                 test = i.test_name
+                field = i.tets_field
                 test_to_add = i
 
         if test_to_add != {}:
             res.append(test_to_add)
 
-        return jsonify([{"limits_used": result.limits_used, 
-                        "test_name": result.test_name, 
-                        "stop_time": result.stop_time, 
-                        "test_value": result.test_value} for result in res[:2]])
+        return jsonify([{"test_name": result.test_name,
+                        "test_field": result.tets_field,
+                        "limits_used": result.limits_used,
+                        "test_value": result.test_value,
+                        "stop_time": result.stop_time} for result in res]) #[:2]
 
     except Exception as e:
 	    return(str(e), 500)
