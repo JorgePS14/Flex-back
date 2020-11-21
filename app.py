@@ -77,7 +77,7 @@ def getTestNames():
 def getTestFields():
     try: 
         fields = db.session.query(models.Tests.tets_field).group_by(models.Tests.tets_field).all()
-        return jsonify([name.tets_field for field in fields])
+        return jsonify([field.tets_field for field in fields])
 
     except Exception as e:
 	    return(str(e), 500)
