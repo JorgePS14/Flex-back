@@ -46,8 +46,11 @@ def getFailed():
 @app.route("/getLimited")
 def getLimited():
     try:
-        limited = db.session.query(models.Tests).filter(models.Tests.limits_used.isnot(None)).all()
-        return jsonify([l.serialize() for l in limited])
+        limited = db.session.query(models.Tests) \
+            .filter(models.Tests.limits_used.isnot(None)) \
+            .filter(models.Tests.limits_used != "") \
+            .all()
+        return jsonify([l.serialize() for l in limited if len(l.limits_used.split()) >= 3])
 
     except Exception as e:
 	    return(str(e), 500)
@@ -79,14 +82,53 @@ def getTestFields():
     except Exception as e:
 	    return(str(e), 500)
 
-#@app.route()
+@app.route("/getLimits", methods = ["POST"])
+def getLimits():
+    dic = json.loads(request.get_data())
+    serialNo = dic['sn']
+    tName = dic['test_name']
+    tField = dic['test_field']
+
+    try:
+        result = db.session.query(models.Tests) \
+                        .filter(models.Tests.limits_used.isnot(None)) \
+                        .filter(models.Tests.limits_used != "") \
+                        .filter_by(sn = serialNo, test_name = tName, tets_field = tField) \
+                        .first()
+
+        if len(result.limits_used.split()) >= 3:
+            return jsonify({"id": result.id,
+                            "sn": result.sn,
+                            "s_no": result.s_no,
+                            "test_name": result.test_name,
+                            "test_field": result.tets_field,
+                            "test_value": result.test_value,
+                            "test_result": result.test_result,
+                            "spec_name": result.spec_name,
+                            "limits_used": result.limits_used,
+                            "limits_min": result.limits_used.split()[2] \
+                                            if (len(result.limits_used.split()) == 3 and \
+                                                (result.limits_used.split()[1] == ">=" or \
+                                                result.limits_used.split()[1] == ">")) \
+                                            else result.limits_used.split()[0],
+                            "limits_max": result.limits_used.split()[2] \
+                                            if (len(result.limits_used.split()) == 3 and \
+                                                (result.limits_used.split()[1] == "<=" or \
+                                                result.limits_used.split()[1] == "<")) \
+                                            else result.limits_used.split()[4],
+                            "start_time": result.start_time,
+                            "stop_time": result.stop_time,
+                            "comments": result.comments})
+
+    except Exception as e:
+	    return(str(e), 500)
 
 @app.route("/getBySerial", methods = ['POST'])
 def getBySerial():
     dic = json.loads(request.get_data())
-    serialNumber = dic['sn']
+    serialNo = dic['sn']
     try:
-        results = db.session.query(models.Tests).filter_by(sn = serialNumber).all()
+        results = db.session.query(models.Tests).filter_by(sn = serialNo).all()
         return jsonify([result.serialize() for result in results])
 
     except Exception as e:
@@ -222,7 +264,7 @@ def latestFromSerial():
 
         for i in rs:
 
-            if test == "" and field == "" and len(i.limits_used.split()) == 5:
+            if test == "" and field == "" and (len(i.limits_used.split()) == 5 or len(i.limits_used.split()) == 3):
                 test = i.test_name
                 field = i.tets_field
                 time = re.split(r"[ :/-]+", i.stop_time)
