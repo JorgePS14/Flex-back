@@ -2,14 +2,8 @@ from flask import Flask, request, jsonify, make_response
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from twilio.rest import Client
-import json
-import jwt
-import random
-import datetime
-import hashlib, binascii, os
+import json, jwt, random, datetime, hashlib, binascii, os, sqlalchemy, re
 from functools import wraps
-import sqlalchemy
-import re
 app = Flask(__name__)
 
 app.config.from_object("config.DevConfig")
@@ -22,43 +16,15 @@ import models
 
 @app.route("/")
 def hello():
-    return "Hello World!"
+    return "Back end is up and running."
 
 #--------------NodeTestResult----------------------
 
 @app.route("/getAllTests")
 def getAllTests():
     try:
-        nodeTestResults= db.session.query(models.Tests).all()
-        return  jsonify([result.serialize() for result in nodeTestResults])
-    except Exception as e:
-	    return(str(e))
-
-@app.route("/getBySerial", methods=['POST'])
-def getBySerial():
-    dic = json.loads(request.get_data())
-    serialNumber=dic['sn']
-    try:
-        results = db.session.query(models.Tests).filter_by(sn=serialNumber).all()
-        return  jsonify([result.serialize() for result in results])
-    except Exception as e:
-	    return(str(e))
-
-@app.route("/getByField", methods=['POST'])
-def getByField():
-    dic = json.loads(request.get_data())
-    field = dic['tets_field']
-    try:
-        results = db.session.query(models.Tests).filter_by(tets_field = field).all()
-        return jsonify([{"name": result.test_name, "serial":result.sn, "field":result.tets_field} for result in results])
-    except Exception as e:
-	    return(str(e))
-
-@app.route("/getFailed")
-def getFailed():
-    try:
-        results = db.session.query(models.Tests).filter_by(test_result="Fail").all()
-        return  jsonify([result.serialize() for result in results])
+        tests = db.session.query(models.Tests).all()
+        return jsonify([result.serialize() for result in tests])
     except Exception as e:
 	    return(str(e))
 
@@ -66,7 +32,15 @@ def getFailed():
 def getPassed():
     try:
         results = db.session.query(models.Tests).filter_by(test_result="Pass").all()
-        return  jsonify([result.serialize() for result in results])
+        return jsonify([result.serialize() for result in results])
+    except Exception as e:
+	    return(str(e))
+
+@app.route("/getFailed")
+def getFailed():
+    try:
+        results = db.session.query(models.Tests).filter_by(test_result="Fail").all()
+        return jsonify([result.serialize() for result in results])
     except Exception as e:
 	    return(str(e))
 
@@ -74,7 +48,35 @@ def getPassed():
 def getLimited():
     try:
         results = db.session.query(models.Tests).filter(models.Tests.limits_used.isnot(None)).all()
-        return  jsonify([result.serialize() for result in results])
+        return jsonify([result.serialize() for result in results])
+    except Exception as e:
+	    return(str(e))
+
+@app.route("/getSerialNos")
+def getSerialNos():
+    try: 
+        rs = db.session.query(models.Tests.sn).group_by(models.Tests.sn).all()
+        return jsonify([result.sn for result in rs])
+    except Exception as e:
+	    return(str(e))  
+
+@app.route("/getBySerial", methods=['POST'])
+def getBySerial():
+    dic = json.loads(request.get_data())
+    serialNumber = dic['sn']
+    try:
+        results = db.session.query(models.Tests).filter_by(sn = serialNumber).all()
+        return jsonify([result.serialize() for result in results])
+    except Exception as e:
+	    return(str(e))
+
+@app.route("/getByField", methods=['POST'])
+def getByField():
+    dic = json.loads(request.get_data())
+    field = dic['test_field']
+    try:
+        results = db.session.query(models.Tests).filter_by(tets_field = field).all()
+        return jsonify([result.serialize() for result in results])
     except Exception as e:
 	    return(str(e))
 
@@ -111,7 +113,7 @@ def addXlsx():
                 sn=i["SN"],
                 s_no=i["S_NO"],
                 test_name=i["Test Name"],
-                test_field=i["Test Field"],
+                tets_field=i["Test Field"],
                 test_value=i["Test Value"],
                 test_result=i["Test Result"],
                 spec_name=i["Spec Name"],
@@ -134,7 +136,7 @@ def addTest():
     sn = dic['sn']
     s_no = dic['s_no']
     test_name = dic['test_name']
-    test_field = dic['test_field']
+    test_field = dic['tets_field']
     test_value = dic['test_value']
     test_result = dic['test_result']
     spec_name = dic['spec_name']
@@ -148,7 +150,7 @@ def addTest():
             sn=sn,
             s_no=s_no,
             test_name=test_name,
-            test_field=test_field,
+            tets_field=test_field,
             test_value=test_value,
             test_result=test_result,
             spec_name=spec_name,
@@ -163,14 +165,6 @@ def addTest():
         return json.dumps(dic)
     except Exception as e:
 	    return(str(e))
-
-@app.route("/getSerialNos")
-def getSerialNos():
-    try: 
-        rs = db.session.query(models.Tests.sn).group_by(models.Tests.sn).all()
-        return jsonify([result.sn for result in rs])
-    except Exception as e:
-	    return(str(e))  
 
 @app.route("/latestFromSerial", methods=["POST"])
 def latestFromSerial():
