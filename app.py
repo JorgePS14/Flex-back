@@ -35,12 +35,22 @@ def getAllTests():
 	    return(str(e))
 
 @app.route("/getBySerial", methods=['POST'])
-def getBySERIAL():
+def getBySerial():
     dic = json.loads(request.get_data())
     serialNumber=dic['sn']
     try:
         results = db.session.query(models.Tests).filter_by(sn=serialNumber).all()
         return  jsonify([result.serialize() for result in results])
+    except Exception as e:
+	    return(str(e))
+
+@app.route("/getByField", methods=['POST'])
+def getByField():
+    dic = json.loads(request.get_data())
+    field = dic['tets_field']
+    try:
+        results = db.session.query(models.Tests).filter_by(tets_field = field).all()
+        return jsonify([{"name": result.test_name, "serial":result.sn, "field":result.tets_field} for result in results])
     except Exception as e:
 	    return(str(e))
 

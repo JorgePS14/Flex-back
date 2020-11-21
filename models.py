@@ -22,7 +22,7 @@ class Tests(db.Model):
         self.sn = sn
         self.s_no = s_no
         self.test_name = test_name
-        self.tets_field = test_field
+        self.tets_field = tets_field
         self.test_value = test_value
         self.test_result = test_result
         self.spec_name = spec_name
