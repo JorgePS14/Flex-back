@@ -50,7 +50,48 @@ def getLimited():
             .filter(models.Tests.limits_used.isnot(None)) \
             .filter(models.Tests.limits_used != "") \
             .all()
-        return jsonify([l.serialize() for l in limited if len(l.limits_used.split()) >= 3])
+        ls = []
+        for l in limited:
+            if len(l.limits_used.split()) == 3:
+                adding = {"id": l.id,
+                    "sn": l.sn,
+                    "s_no": l.s_no,
+                    "test_name": l.test_name,
+                    "test_field": l.tets_field,
+                    "test_value": l.test_value,
+                    "test_result": l.test_result,
+                    "spec_name": l.spec_name,
+                    "limits_used": l.limits_used,
+                    "start_time": l.start_time,
+                    "stop_time": l.stop_time,
+                    "comments": l.comments}
+
+                if l.limits_used.split()[1] == ">=" or l.limits_used.split()[1] == ">":
+                    adding["limits_min"] = l.limits_used.split()[2]
+                    adding["warning"] = assessWarning(val = float(l.test_value), minVal = float(l.limits_used.split()[2]))
+                else:
+                    adding["limits_max"] = l.limits_used.split()[2]
+                    adding["warning"] = assessWarning(val = float(l.test_value), maxVal = float(l.limits_used.split()[2]))
+                ls.append(adding)
+
+            elif len(l.limits_used.split()) == 5:
+                adding = {"id": l.id,
+                    "sn": l.sn,
+                    "s_no": l.s_no,
+                    "test_name": l.test_name,
+                    "test_field": l.tets_field,
+                    "test_value": l.test_value,
+                    "test_result": l.test_result,
+                    "spec_name": l.spec_name,
+                    "limits_used": l.limits_used,
+                    "limits_min": l.limits_used.split()[0],
+                    "limits_max": l.limits_used.split()[4],
+                    "start_time": l.start_time,
+                    "stop_time": l.stop_time,
+                    "comments": l.comments,
+                    "warning": assessWarning(val = float(l.test_value), minVal = float(l.limits_used.split()[0]), maxVal = float(l.limits_used.split()[4]))}
+                ls.append(adding)
+        return jsonify(ls)
 
     except Exception as e:
 	    return(str(e), 500)
@@ -319,6 +360,23 @@ def latestFromSerial():
 
     except Exception as e:
 	    return(str(e), 500)
+
+def assessWarning(val = False, minVal = False, maxVal = False):
+    if not (val and (minVal or maxVal)):
+        print("Values not provided")
+        return
+
+    if minVal and maxVal:
+        rng = maxVal - minVal
+        tolerance = rng * 0.025
+        return (val <= minVal + tolerance) or (val >= maxVal - tolerance)
+
+    if maxVal:
+        tolerance = maxVal * 0.05
+        return val >= maxVal - tolerance
+    
+    tolerance = minVal * 0.05
+    return val <= minVal + tolerance
 
 def olderThan(old, new):
     if old == new:
