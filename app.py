@@ -68,10 +68,10 @@ def getLimited():
 
                 if l.limits_used.split()[1] == ">=" or l.limits_used.split()[1] == ">":
                     adding["limits_min"] = l.limits_used.split()[2]
-                    adding["warning"] = assessWarning(val = float(l.test_value), minVal = float(l.limits_used.split()[2]))
+                    adding["warning"] = assessWarning(val = l.test_value, minVal = l.limits_used.split()[2])
                 else:
                     adding["limits_max"] = l.limits_used.split()[2]
-                    adding["warning"] = assessWarning(val = float(l.test_value), maxVal = float(l.limits_used.split()[2]))
+                    adding["warning"] = assessWarning(val = l.test_value, maxVal = l.limits_used.split()[2])
                 ls.append(adding)
 
             elif len(l.limits_used.split()) == 5:
@@ -89,7 +89,7 @@ def getLimited():
                     "start_time": l.start_time,
                     "stop_time": l.stop_time,
                     "comments": l.comments,
-                    "warning": assessWarning(val = float(l.test_value), minVal = float(l.limits_used.split()[0]), maxVal = float(l.limits_used.split()[4]))}
+                    "warning": assessWarning(val = l.test_value, minVal = l.limits_used.split()[0], maxVal = l.limits_used.split()[4])}
                 ls.append(adding)
         return jsonify(ls)
 
@@ -363,20 +363,22 @@ def latestFromSerial():
 
 def assessWarning(val = False, minVal = False, maxVal = False):
     if not (val and (minVal or maxVal)):
-        print("Values not provided")
-        return
+        return "Values not provided"
+
+    if minVal == maxVal:
+        return False
 
     if minVal and maxVal:
-        rng = maxVal - minVal
+        rng = float(maxVal) - float(minVal)
         tolerance = rng * 0.025
-        return (val <= minVal + tolerance) or (val >= maxVal - tolerance)
+        return (float(val) <= float(minVal) + tolerance) or (float(val) >= float(maxVal) - tolerance)
 
     if maxVal:
-        tolerance = maxVal * 0.05
-        return val >= maxVal - tolerance
+        tolerance = float(maxVal) * 0.05
+        return float(val) >= float(maxVal) - tolerance
     
-    tolerance = minVal * 0.05
-    return val <= minVal + tolerance
+    tolerance = float(minVal) * 0.05
+    return float(val) <= float(minVal) + tolerance
 
 def olderThan(old, new):
     if old == new:
