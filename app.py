@@ -126,7 +126,6 @@ def getTestFields():
 @app.route("/getLimits", methods = ["POST"])
 def getLimits():
     dic = json.loads(request.get_data())
-    serialNo = dic['sn']
     tName = dic['test_name']
     tField = dic['test_field']
 
@@ -134,7 +133,7 @@ def getLimits():
         result = db.session.query(models.Tests) \
                         .filter(models.Tests.limits_used.isnot(None)) \
                         .filter(models.Tests.limits_used != "") \
-                        .filter_by(sn = serialNo, test_name = tName, tets_field = tField) \
+                        .filter_by(test_name = tName, tets_field = tField) \
                         .first()
 
         if len(result.limits_used.split()) == 3:
@@ -175,6 +174,7 @@ def getLimits():
                             "stop_time": result.stop_time,
                             "comments": result.comments})
 
+        return jsonify({"message":"That test and field combination has no limits established."})
     except Exception as e:
 	    return(str(e), 500)
 
@@ -211,6 +211,9 @@ def addXlsx():
         for i in node_array:
             count += 1
 
+            if 'S.No' not in i:
+                i["S.No"] = ""
+
             if "Limits Used" not in i:
                 i["Limits Used"] = ""
 
@@ -240,7 +243,7 @@ def addXlsx():
             
             new = models.Tests(
                 sn = i["SN"],
-                s_no = i["S_NO"],
+                s_no = i["S.No"],
                 test_name = i["Test Name"],
                 tets_field = i["Test Field"],
                 test_value = i["Test Value"],
@@ -253,47 +256,12 @@ def addXlsx():
 
             db.session.add(new)
 
+        print("Success")
         db.session.commit()
         return json.dumps({"Success Count": count})
 
     except Exception as e:
-	    return(str(e), 500)
-
-@app.route("/addTestResults", methods = ['POST'])
-def addTestResults():
-    dic = json.loads(request.get_data())
-    sn = dic['sn']
-    s_no = dic['s_no']
-    test_name = dic['test_name']
-    test_field = dic['test_field']
-    test_value = dic['test_value']
-    test_result = dic['test_result']
-    spec_name = dic['spec_name']
-    limits_used = dic['limits_used']
-    start_time = dic['start_time']
-    stop_time = dic['stop_time']
-    comments = dic['comments']
-
-    try:
-        new = models.NodeTestResult(
-            sn = sn,
-            s_no = s_no,
-            test_name = test_name,
-            tets_field = test_field,
-            test_value = test_value,
-            test_result = test_result,
-            spec_name = spec_name,
-            limits_used = limits_used,
-            start_time = start_time,
-            stop_time = stop_time,
-            comments = comments)
-        
-        db.session.add(new)
-        db.session.commit()
-        return json.dumps({"SN":str(ntr.sn), "S_NO": str(ntr.s_no)})
-
-    except Exception as e:
-	    return(str(e), 500)
+        return(str(e), 500)
 
 @app.route("/latestFromSerial", methods=["POST"])
 def latestFromSerial():
@@ -356,7 +324,7 @@ def latestFromSerial():
                         "test_field": result.tets_field,
                         "limits_used": result.limits_used,
                         "test_value": result.test_value,
-                        "stop_time": result.stop_time} for result in res]) #[:2]
+                        "stop_time": result.stop_time} for result in res])
 
     except Exception as e:
 	    return(str(e), 500)
